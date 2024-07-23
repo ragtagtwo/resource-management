@@ -9,6 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "http://localhost:4200")
 public class Controller {
     @Autowired
     private EngineerService engineerService;
@@ -37,7 +38,7 @@ public class Controller {
     }
 
     @DeleteMapping("/engineers/{id}")
-    public void deleteEngineer(@PathVariable Long id) {
-        engineerService.deleteEngineer(id);
+    public EngineerDTO deleteEngineer(@PathVariable Long id) {
+        return engineerService.deleteEngineer(id);
     }
 }

@@ -48,8 +48,11 @@ public class EngineerService {
         }
     }
 
-    public void deleteEngineer(Long id) {
+    public EngineerDTO deleteEngineer(Long id) {
+        Engineer engineer = engineerRepository.findEngineerById(id);
+        EngineerDTO engineerDTO = convertToDTO(engineer);
         engineerRepository.deleteById(id);
+        return engineerDTO;
     }
 
     private EngineerDTO convertToDTO(Engineer engineer) {
