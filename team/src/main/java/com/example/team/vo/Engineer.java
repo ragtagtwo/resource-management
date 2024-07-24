@@ -13,4 +13,8 @@ public class Engineer {
     private String name;
 
     private Long teamId;
+    private Boolean chat;
+    private Boolean p1;
+    private Boolean qm;
+    private Boolean stc;
 }

@@ -1,18 +1,13 @@
-package com.example.engineer.model;
+package com.example.task.VO;
 
-import jakarta.persistence.*;
 import lombok.*;
 
-@Entity
-@Table(name="engineers")
-@Getter
-@Setter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@Getter
+@Setter
 public class Engineer {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String name;
@@ -22,5 +17,4 @@ public class Engineer {
     private Boolean p1;
     private Boolean qm;
     private Boolean stc;
-
 }

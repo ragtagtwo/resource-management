@@ -19,11 +19,11 @@ public class EngineerService {
         List<Engineer> engineers = engineerRepository.findAll();
         return engineers.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
+
     public List<EngineerDTO> getEngineersByTeamId(Long teamId) {
         List<Engineer> engineers = engineerRepository.findByTeamId(teamId);
         return engineers.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
-
 
     public EngineerDTO getEngineerById(Long id) {
         Engineer engineer = engineerRepository.findEngineerById(id);
@@ -41,6 +41,10 @@ public class EngineerService {
         if (engineer != null) {
             engineer.setName(engineerDTO.getName());
             engineer.setTeamId(engineerDTO.getTeamId());
+            engineer.setChat(engineerDTO.getChat());
+            engineer.setP1(engineerDTO.getP1());
+            engineer.setQm(engineerDTO.getQm());
+            engineer.setStc(engineerDTO.getStc());
             Engineer updatedEngineer = engineerRepository.save(engineer);
             return convertToDTO(updatedEngineer);
         } else {
@@ -60,6 +64,10 @@ public class EngineerService {
                 .id(engineer.getId())
                 .name(engineer.getName())
                 .teamId(engineer.getTeamId())
+                .chat(engineer.getChat())
+                .p1(engineer.getP1())
+                .qm(engineer.getQm())
+                .stc(engineer.getStc())
                 .build();
     }
 
@@ -68,6 +76,10 @@ public class EngineerService {
                 .id(engineerDTO.getId())
                 .name(engineerDTO.getName())
                 .teamId(engineerDTO.getTeamId())
+                .chat(engineerDTO.getChat())
+                .p1(engineerDTO.getP1())
+                .qm(engineerDTO.getQm())
+                .stc(engineerDTO.getStc())
                 .build();
     }
 }

@@ -3,22 +3,21 @@ package com.example.task.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
-@Table(name="tasks")
+@Table(name="vacations")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Task {
+public class Vacation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;
+
     private Long engineerId;
-    private LocalDateTime createdDate;
-
-
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

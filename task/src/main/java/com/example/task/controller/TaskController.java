@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@CrossOrigin(origins = "http://localhost:4200")
 @RestController
 @RequestMapping("/api")
 public class TaskController {
@@ -42,4 +42,9 @@ public class TaskController {
     public List<TaskDTO> getTasksByEngineerId(@PathVariable Long engineerId) {
         return taskService.getTasksByEngineerId(engineerId);
     }
+
+
+
+
+
 }
