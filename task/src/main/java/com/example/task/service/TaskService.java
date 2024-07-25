@@ -58,6 +58,7 @@ public class TaskService {
                 .name(task.getName())
                 .engineerId(task.getEngineerId())
                 .createdDate(task.getCreatedDate())
+                .shift(task.getShift())
                 .build();
     }
 
@@ -67,6 +68,7 @@ public class TaskService {
                 .name(taskDTO.getName())
                 .engineerId(taskDTO.getEngineerId())
                 .createdDate(taskDTO.getCreatedDate())
+                .shift(taskDTO.getShift())
                 .build();
     }
 }

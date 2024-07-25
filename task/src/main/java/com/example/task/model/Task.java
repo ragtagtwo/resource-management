@@ -19,6 +19,6 @@ public class Task {
     private String name;
     private Long engineerId;
     private LocalDateTime createdDate;
-
+    private String shift;
 
 }
