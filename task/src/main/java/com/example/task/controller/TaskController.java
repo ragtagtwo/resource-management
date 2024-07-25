@@ -1,6 +1,7 @@
 package com.example.task.controller;
 
 import com.example.task.DTO.TaskDTO;
+import com.example.task.service.TaskDistribution;
 import com.example.task.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,15 @@ import java.util.List;
 public class TaskController {
     @Autowired
     private TaskService taskService;
+    @Autowired
+    private TaskDistribution taskDistribution;
+
+    @PostMapping("/distribute")
+    public void distributeTasks(@RequestParam int number) {
+        if (number == 1) {
+            taskDistribution.distributeAll();
+        }
+    }
 
     @GetMapping("/tasks")
     public List<TaskDTO> getAllTasks() {

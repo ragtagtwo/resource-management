@@ -2,6 +2,7 @@ package com.example.task.DTO;
 
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -13,6 +14,6 @@ public class TaskDTO {
     private Long id;
     private String name;
     private Long engineerId;
-    private LocalDateTime createdDate;
+    private LocalDate createdDate;
     private String shift;
 }

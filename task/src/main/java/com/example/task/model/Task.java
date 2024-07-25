@@ -3,6 +3,7 @@ package com.example.task.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,7 +19,7 @@ public class Task {
     private Long id;
     private String name;
     private Long engineerId;
-    private LocalDateTime createdDate;
+    private LocalDate createdDate;
     private String shift;
 
 }
