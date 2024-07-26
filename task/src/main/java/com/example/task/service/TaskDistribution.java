@@ -10,6 +10,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
@@ -47,7 +48,11 @@ public class TaskDistribution {
         distributeP1Tasks(engineers, startDate, endDate);
         distributeChatTasks(engineers, startDate, endDate);
     }
-
+    @Transactional
+    public void reset() {
+        LocalDate today = LocalDate.now();
+        taskRepository.deleteByCreatedDateGreaterThanEqualAndNameIn(today, List.of("P1", "chat"));
+    }
     public void distributeP1Tasks(List<Engineer> engineers, Calendar startDate, Calendar endDate) {
         int engineerCount = engineers.size();
         int startMonth = startDate.get(Calendar.MONTH);

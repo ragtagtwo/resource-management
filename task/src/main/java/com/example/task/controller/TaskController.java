@@ -20,6 +20,8 @@ public class TaskController {
     public void distributeTasks(@RequestParam int number) {
         if (number == 1) {
             taskDistribution.distributeAll();
+        } else if (number == 2) {
+            taskDistribution.reset();
         }
     }
 
