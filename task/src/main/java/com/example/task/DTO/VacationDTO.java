@@ -14,4 +14,5 @@ public class VacationDTO {
     private Long engineerId;
     private LocalDate startDate;
     private LocalDate endDate;
+    private String shift;
 }

@@ -13,4 +13,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByEngineerIdAndCreatedDate(Long engineerId, LocalDate toLocalDate);
 
     void deleteByCreatedDateGreaterThanEqualAndNameIn(LocalDate today, List<String> p1);
+
+    List<Task> findByNameAndCreatedDateAndShift(String chat, LocalDate localDate, String shift);
+
+    List<Task> findByNameAndCreatedDate(String p1, LocalDate localDate);
+
+    List<Task> findByEngineerIdAndCreatedDateAndShift(Long id, LocalDate localDate, String shift);
 }

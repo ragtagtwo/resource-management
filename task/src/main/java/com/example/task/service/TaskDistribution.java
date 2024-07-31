@@ -41,31 +41,26 @@ public class TaskDistribution {
         List<Engineer> engineers = response.getBody();
 
         Calendar startDate = Calendar.getInstance();
-        startDate.set(2024, Calendar.AUGUST, 1);
         Calendar endDate = Calendar.getInstance();
-        endDate.set(2024, Calendar.AUGUST, 31);
+        endDate.add(Calendar.MONTH, 3);
 
         distributeP1Tasks(engineers, startDate, endDate);
         distributeChatTasks(engineers, startDate, endDate);
     }
+
     @Transactional
     public void reset() {
         LocalDate today = LocalDate.now();
-        taskRepository.deleteByCreatedDateGreaterThanEqualAndNameIn(today, List.of("P1", "chat"));
+        taskRepository.deleteByCreatedDateGreaterThanEqualAndNameIn(today, List.of("p1", "chat"));
     }
+
     public void distributeP1Tasks(List<Engineer> engineers, Calendar startDate, Calendar endDate) {
         int engineerCount = engineers.size();
-        int startMonth = startDate.get(Calendar.MONTH);
-        int year = startDate.get(Calendar.YEAR);
         Calendar calendar = (Calendar) startDate.clone();
         int startIndex = 0;
 
-        for (int week = 0; week < 4; week++) {
-            for (int day = Calendar.MONDAY; day <= Calendar.FRIDAY; day++) {
-                calendar.set(Calendar.MONTH, startMonth);
-                calendar.set(Calendar.YEAR, year);
-                calendar.set(Calendar.WEEK_OF_MONTH, week + 1);
-                calendar.set(Calendar.DAY_OF_WEEK, day);
+        while (calendar.before(endDate)) {
+            if (!isWeekend(calendar)) {
                 Date currentDate = calendar.getTime();
 
                 boolean taskAssigned = false;
@@ -73,58 +68,86 @@ public class TaskDistribution {
                     int engineerIndex = (startIndex + i) % engineerCount;
                     Engineer engineer = engineers.get(engineerIndex);
 
-                    if (Boolean.TRUE.equals(engineer.getP1()) && checkAvailable(engineer, currentDate)) {
-                        saveTask(engineer.getId(), "P1", currentDate);
+                    if (Boolean.TRUE.equals(engineer.getP1()) && checkAvailableForP1(engineer, currentDate) && checkAvailabilityP1(currentDate)) {
+                        saveTask(engineer.getId(), "p1", currentDate);
                         taskAssigned = true;
                         startIndex = (engineerIndex + 1) % engineerCount;
                         break;
                     }
                 }
 
-                if (!taskAssigned) {
-                    System.out.println("No available engineer for P1 task on " + currentDate);
-                }
             }
-            // Increment startIndex for the next week
-            startIndex = (startIndex + 1) % engineerCount;
+            calendar.add(Calendar.DATE, 1);
         }
     }
 
     public void distributeChatTasks(List<Engineer> engineers, Calendar startDate, Calendar endDate) {
         int engineerCount = engineers.size();
+        Calendar date = (Calendar) startDate.clone();
 
-        for (Calendar date = (Calendar) startDate.clone(); !date.after(endDate); date.add(Calendar.DATE, 1)) {
-            if (isWeekend(date)) continue; // Skip weekends
+        while (!date.after(endDate)) {
+            if (!isWeekend(date)) {
+                for (int shift = 0; shift < 2; shift++) { // 0 for morning, 1 for afternoon
+                    int engineersAssigned = 0;
+                    String shiftName = shift == 0 ? "morning" : "afternoon";
 
-            int dayOfMonth = date.get(Calendar.DAY_OF_MONTH);
+                    for (int j = 0; j < engineerCount && engineersAssigned < 2; j++) {
+                        Engineer engineer = engineers.get((date.get(Calendar.DAY_OF_MONTH) + j + shift * 2) % engineerCount);
 
-            for (int shift = 0; shift < 2; shift++) { // 0 for morning, 1 for afternoon
-                int engineersAssigned = 0;
-
-                for (int j = 0; j < engineerCount && engineersAssigned < 2; j++) {
-                    Engineer engineer = engineers.get((dayOfMonth + j + shift * 2) % engineerCount);
-
-                    if (Boolean.TRUE.equals(engineer.getChat()) && checkAvailable(engineer, date.getTime())) {
-                        saveChat(engineer.getId(), "chat", date.getTime(), shift == 0 ? "morning" : "afternoon");
-                        engineersAssigned++;
+                        if (Boolean.TRUE.equals(engineer.getChat()) && checkAvailableForChatShift(engineer, date.getTime(), shiftName) && checkAvailabilityChat(date.getTime(), shiftName)) {
+                            saveChat(engineer.getId(), "chat", date.getTime(), shiftName);
+                            engineersAssigned++;
+                        }
                     }
                 }
             }
+            date.add(Calendar.DATE, 1);
         }
     }
 
-    private boolean checkAvailable(Engineer engineer, Date date) {
-        // Check if engineer is on vacation
+    private boolean checkAvailableForChatShift(Engineer engineer, Date date, String shift) {
         LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        // Check if the engineer is on vacation during this shift
+        List<Vacation> vacations = vacationRepository.findByEngineerIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                engineer.getId(), localDate, localDate);
+        if (!vacations.isEmpty() && vacations.stream().anyMatch(v -> shiftMatches(v, shift))) {
+            return false;
+        }
+
+        // Check if the engineer has other chat tasks during this shift
+        List<Task> tasks = taskRepository.findByEngineerIdAndCreatedDateAndShift(engineer.getId(), localDate, shift);
+        return tasks.isEmpty();
+    }
+    private boolean shiftMatches(Vacation vacation, String shift) {
+        String vacationShift = vacation.getShift();
+        return shift.equals(vacationShift) || "full day".equals(vacationShift);
+    }
+
+    private boolean checkAvailableForP1(Engineer engineer, Date date) {
+        LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        // Check if the engineer is on vacation
         List<Vacation> vacations = vacationRepository.findByEngineerIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                 engineer.getId(), localDate, localDate);
         if (!vacations.isEmpty()) {
             return false;
         }
 
-        // Check if engineer has other tasks on the same day
+        // Check if the engineer has other tasks on the same day
         List<Task> tasks = taskRepository.findByEngineerIdAndCreatedDate(engineer.getId(), localDate);
         return tasks.isEmpty();
+    }
+
+
+    private boolean checkAvailabilityP1(Date date) {
+        LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        List<Task> tasks = taskRepository.findByNameAndCreatedDate("p1", localDate);
+        return tasks.isEmpty();
+    }
+
+    private boolean checkAvailabilityChat(Date date, String shift) {
+        LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        List<Task> tasks = taskRepository.findByNameAndCreatedDateAndShift("chat", localDate, shift);
+        return tasks.size() < 2;
     }
 
     private void saveChat(Long engineerId, String taskName, Date date, String shift) {

@@ -20,4 +20,5 @@ public class Vacation {
     private Long engineerId;
     private LocalDate startDate;
     private LocalDate endDate;
+    private String shift;
 }
