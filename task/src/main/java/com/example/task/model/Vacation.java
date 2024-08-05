@@ -18,6 +18,7 @@ public class Vacation {
     private Long id;
 
     private Long engineerId;
+    private Long teamId;
     private LocalDate startDate;
     private LocalDate endDate;
     private String shift;

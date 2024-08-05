@@ -4,7 +4,6 @@ import com.example.task.model.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
@@ -12,11 +11,29 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByEngineerId(Long engineerId);
     List<Task> findByEngineerIdAndCreatedDate(Long engineerId, LocalDate toLocalDate);
 
-    void deleteByCreatedDateGreaterThanEqualAndNameIn(LocalDate today, List<String> p1);
+
 
     List<Task> findByNameAndCreatedDateAndShift(String chat, LocalDate localDate, String shift);
 
     List<Task> findByNameAndCreatedDate(String p1, LocalDate localDate);
 
-    List<Task> findByEngineerIdAndCreatedDateAndShift(Long id, LocalDate localDate, String shift);
+
+
+    List<Task> findByEngineerIdAndCreatedDateAndNameIn(Long id, LocalDate localDate, List<String> p1);
+
+    List<Task> findByEngineerIdAndCreatedDateAndName(Long id, LocalDate localDate, String chat);
+
+
+
+    Task findFirstByNameAndCreatedDateOrderByCreatedDateDesc(String p1, LocalDate previousWorkingDate);
+
+    void deleteByCreatedDateGreaterThanEqualAndNameIn(LocalDate today, List<String> p1);
+
+    List<Task> findByTeamId(Long teamId);
+
+    List<Task> findByCreatedDateAndShift(LocalDate localDate, String shift);
+
+    List<Task> findByCreatedDate(LocalDate localDate);
+
+    void deleteByCreatedDateGreaterThanEqualAndNameInAndTeamId(LocalDate today, List<String> p1, Long teamId);
 }

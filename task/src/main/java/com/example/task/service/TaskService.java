@@ -19,6 +19,10 @@ public class TaskService {
         List<Task> tasks = taskRepository.findAll();
         return tasks.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
+    public List<TaskDTO> getTasksByTeamId(Long teamId) {
+        List<Task> tasks = taskRepository.findByTeamId(teamId);
+        return tasks.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
 
     public TaskDTO getTaskById(Long id) {
         Task task = taskRepository.findTaskById(id);
@@ -59,6 +63,7 @@ public class TaskService {
                 .engineerId(task.getEngineerId())
                 .createdDate(task.getCreatedDate())
                 .shift(task.getShift())
+                .teamId(task.getId())
                 .build();
     }
 
@@ -69,6 +74,7 @@ public class TaskService {
                 .engineerId(taskDTO.getEngineerId())
                 .createdDate(taskDTO.getCreatedDate())
                 .shift(taskDTO.getShift())
+                .teamId(taskDTO.getId())
                 .build();
     }
 }

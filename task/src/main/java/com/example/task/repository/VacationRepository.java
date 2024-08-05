@@ -11,4 +11,5 @@ import java.util.List;
 public interface VacationRepository extends JpaRepository<Vacation, Long> {
 
     List<Vacation> findByEngineerIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(Long engineerId, LocalDate startDate, LocalDate endDate);
+    List<Vacation> findByTeamId(Long teamId);
 }

@@ -17,12 +17,16 @@ public class TaskController {
     private TaskDistribution taskDistribution;
 
     @PostMapping("/distribute")
-    public void distributeTasks(@RequestParam int number) {
+    public void distributeTasks(@RequestParam int number, @RequestParam Long teamId) {
         if (number == 1) {
-            taskDistribution.distributeAll();
+            taskDistribution.distributeAll(teamId);
         } else if (number == 2) {
-            taskDistribution.reset();
+            taskDistribution.reset(teamId);
         }
+    }
+    @GetMapping("/tasks/team/{teamId}")
+    public List<TaskDTO> getTasksByTeamId(@PathVariable Long teamId) {
+        return taskService.getTasksByTeamId(teamId);
     }
 
     @GetMapping("/tasks")

@@ -25,6 +25,11 @@ public class VacationService {
         return convertToDTO(vacation);
     }
 
+    public List<VacationDTO> getVacationsByTeamId(Long teamId) {
+        List<Vacation> vacations = vacationRepository.findByTeamId(teamId);
+        return vacations.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
     public VacationDTO saveVacation(VacationDTO vacationDTO) {
         Vacation vacation = convertToEntity(vacationDTO);
         Vacation savedVacation = vacationRepository.save(vacation);
@@ -37,6 +42,7 @@ public class VacationService {
             vacation.setStartDate(vacationDTO.getStartDate());
             vacation.setEndDate(vacationDTO.getEndDate());
             vacation.setEngineerId(vacationDTO.getEngineerId());
+            vacation.setTeamId(vacationDTO.getTeamId());  // Add this line
             Vacation updatedVacation = vacationRepository.save(vacation);
             return convertToDTO(updatedVacation);
         } else {
@@ -52,6 +58,7 @@ public class VacationService {
         return VacationDTO.builder()
                 .id(vacation.getId())
                 .engineerId(vacation.getEngineerId())
+                .teamId(vacation.getTeamId())  // Add this line
                 .startDate(vacation.getStartDate())
                 .endDate(vacation.getEndDate())
                 .build();
@@ -61,6 +68,7 @@ public class VacationService {
         return Vacation.builder()
                 .id(vacationDTO.getId())
                 .engineerId(vacationDTO.getEngineerId())
+                .teamId(vacationDTO.getTeamId())  // Add this line
                 .startDate(vacationDTO.getStartDate())
                 .endDate(vacationDTO.getEndDate())
                 .build();

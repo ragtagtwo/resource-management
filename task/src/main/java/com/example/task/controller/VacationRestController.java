@@ -20,7 +20,11 @@ public class VacationRestController {
         List<VacationDTO> vacations = vacationService.getAllVacations();
         return ResponseEntity.ok(vacations);
     }
-
+    @GetMapping("/team/{teamId}")
+    public ResponseEntity<List<VacationDTO>> getVacationsByTeamId(@PathVariable Long teamId) {
+        List<VacationDTO> vacations = vacationService.getVacationsByTeamId(teamId);
+        return ResponseEntity.ok(vacations);
+    }
     @GetMapping("/{id}")
     public ResponseEntity<VacationDTO> getVacationById(@PathVariable Long id) {
         VacationDTO vacation = vacationService.getVacationById(id);

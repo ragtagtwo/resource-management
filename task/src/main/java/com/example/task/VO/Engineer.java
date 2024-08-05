@@ -17,4 +17,7 @@ public class Engineer {
     private Boolean p1;
     private Boolean qm;
     private Boolean stc;
+    private int priority;
+    private int p1Done;
+    private int index;
 }

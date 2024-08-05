@@ -14,6 +14,7 @@ public class TaskDTO {
     private Long id;
     private String name;
     private Long engineerId;
+    private Long teamId;
     private LocalDate createdDate;
     private String shift;
 }

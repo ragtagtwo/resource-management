@@ -13,6 +13,7 @@ public class VacationDTO {
     private Long id;
     private Long engineerId;
     private LocalDate startDate;
+    private Long teamId;
     private LocalDate endDate;
     private String shift;
 }
