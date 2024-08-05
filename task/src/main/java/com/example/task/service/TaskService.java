@@ -63,7 +63,7 @@ public class TaskService {
                 .engineerId(task.getEngineerId())
                 .createdDate(task.getCreatedDate())
                 .shift(task.getShift())
-                .teamId(task.getId())
+                .teamId(task.getTeamId())  // Correct mapping for teamId
                 .build();
     }
 
@@ -74,7 +74,7 @@ public class TaskService {
                 .engineerId(taskDTO.getEngineerId())
                 .createdDate(taskDTO.getCreatedDate())
                 .shift(taskDTO.getShift())
-                .teamId(taskDTO.getId())
+                .teamId(taskDTO.getTeamId())  // Correct mapping for teamId
                 .build();
     }
 }
