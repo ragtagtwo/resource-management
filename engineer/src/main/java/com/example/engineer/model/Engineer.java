@@ -18,13 +18,13 @@ public class Engineer {
     private String name;
 
     private Long teamId;
-    @NonNull
+
     private Boolean chat;
-    @NonNull
+
     private Boolean p1;
-    @NonNull
+
     private Boolean qm;
-    @NonNull
+
     private Boolean stc;
 
 }
