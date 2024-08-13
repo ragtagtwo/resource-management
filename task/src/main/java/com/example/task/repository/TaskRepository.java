@@ -42,4 +42,6 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByNameAndCreatedDateAndTeamId(String p1, LocalDate localDate, Long teamId);
 
     Task findFirstByNameAndCreatedDateAndTeamId(String p1, LocalDate previousWorkingDate, Long teamId);
+
+    List<Task> findByCreatedDateBetweenAndTeamId(LocalDate startDate, LocalDate endDate, long teamId);
 }
