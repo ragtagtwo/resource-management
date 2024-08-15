@@ -28,6 +28,7 @@ public class StatController {
             @RequestParam("teamId") int teamId) {
         return statService.calculateStatsForCurrentQuarter(teamId);
     }
+
     @PutMapping("/stats/current-quarter/update")
     public List<StatResponse> updateStatsForCurrentQuarter(
             @RequestParam("teamId") int teamId) {

@@ -17,6 +17,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.* ;
 
 @Service
 public class TaskDistribution {
@@ -45,6 +46,31 @@ public class TaskDistribution {
 
         distributeP1Tasks(engineers, startDate, endDate);
         distributeChatTasks(engineers, startDate, endDate);
+
+    }
+@Transactional
+    public void equilibrate(int Type, Long teamId) {
+        RestTemplate restTemplate = new RestTemplate();
+        String engineersUrl = "http://localhost:8081/api/engineers/team/" + teamId;
+        ResponseEntity<List<Engineer>> response = restTemplate.exchange(
+                engineersUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Engineer>>() {}
+        );
+
+        List<Engineer> engineers = response.getBody();
+
+        if (Type == 1) {
+            Calendar startDate = Calendar.getInstance();
+            Calendar endDate = Calendar.getInstance();
+            endDate.add(Calendar.MONTH, 3);
+            LocalDate sDate = LocalDate.ofInstant(startDate.toInstant(), ZoneId.systemDefault());
+            LocalDate eDate = LocalDate.ofInstant(endDate.toInstant(), ZoneId.systemDefault()); // Example: end date is a week from the start date
+            redistributeChatTasks(engineers, sDate, eDate, teamId);
+        }
+
+        // You can handle other cases for different `Type` values here if needed
     }
 
     @Transactional
@@ -338,5 +364,107 @@ public class TaskDistribution {
     private boolean isWeekend(Calendar date) {
         int dayOfWeek = date.get(Calendar.DAY_OF_WEEK);
         return (dayOfWeek == Calendar.SATURDAY || dayOfWeek == Calendar.SUNDAY);
+    }
+
+    // this is the redistribute chat to equilibrate :
+    @Transactional
+    public void redistributeChatTasks(List<Engineer> engineers, LocalDate startDate, LocalDate endDate, Long teamId) {
+        // Step 1: Calculate scores for each working day
+        Map<Engineer, Integer> engineerScores = new HashMap<>();
+
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            if (isWorkingDay(date)) {
+                for (Engineer engineer : engineers) {
+                    int p1Count = countTasks(engineer, date, "p1");
+                    int stcCount = countTasks(engineer, date, "stc");
+                    int qmCount = countTasks(engineer, date, "qm");
+                    int chatCount = countTasks(engineer, date, "chat");
+
+                    int score = p1Count * 2 + stcCount + qmCount + chatCount;
+                    engineerScores.put(engineer, engineerScores.getOrDefault(engineer, 0) + score);
+                }
+            }
+        }
+
+        // Step 2: Calculate the average score
+        int totalScore = engineerScores.values().stream().mapToInt(Integer::intValue).sum();
+        int averageScore = totalScore / engineers.size();
+
+        // Step 3: Iterate over each week to adjust Chat tasks for engineers with positive credit
+        for (LocalDate weekStartDate = startDate; !weekStartDate.isAfter(endDate); weekStartDate = weekStartDate.plusWeeks(1)) {
+            List<Task> tasksForWeek = getTasksForWeek(weekStartDate, teamId);
+
+            System.out.println("Starting redistribution for week: " + weekStartDate);
+
+            for (Engineer engineer : engineers) {
+                int score = engineerScores.getOrDefault(engineer, 0);
+                int credit = averageScore - score;
+                System.out.println("Engineer: " + engineer.getName() + ", Score: " + score + ", Credit: " + credit);
+
+                if (credit > 0) {
+                    for (Task task : tasksForWeek) {
+                        System.out.println("Checking task on " + task.getCreatedDate() + " for possible reassignment to " + engineer.getName());
+                        if (task.getName().equals("chat") && canReplaceChat(engineer, task)) {
+                            Engineer currentEngineer = getEngineerById(engineers, task.getEngineerId());
+
+                            if (isAvailableForChat(engineer, task.getCreatedDate()) && !hasChatOnSameDay(engineer, task.getCreatedDate())) {
+                                // Replace Chat task
+                                System.out.println("Assigning task from " + currentEngineer.getName() + " to " + engineer.getName());
+                                task.setEngineerId(engineer.getId());
+                                taskRepository.save(task);
+
+                                recalculateScore(engineerScores, engineer, currentEngineer, task.getCreatedDate());
+                                credit--;
+
+                                if (credit == 0) {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    private void recalculateScore(Map<Engineer, Integer> engineerScores, Engineer lowScoreEngineer, Engineer currentEngineer, LocalDate date) {
+        int lowScoreEngineerOldScore = engineerScores.get(lowScoreEngineer);
+        int currentEngineerOldScore = engineerScores.get(currentEngineer);
+
+        int lowScoreEngineerNewScore = lowScoreEngineerOldScore + 1; // Add 1 Chat task
+        int currentEngineerNewScore = currentEngineerOldScore - 1; // Remove 1 Chat task
+
+        engineerScores.put(lowScoreEngineer, lowScoreEngineerNewScore);
+        engineerScores.put(currentEngineer, currentEngineerNewScore);
+    }
+    private boolean isWorkingDay(LocalDate date) {
+        // Logic to define working days (e.g., exclude weekends and holidays)
+        return !(date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
+    }
+
+    private int countTasks(Engineer engineer, LocalDate date, String taskType) {
+        return taskRepository.findByEngineerIdAndCreatedDateAndName(engineer.getId(), date, taskType).size();
+    }
+
+    private List<Task> getTasksForWeek(LocalDate date, Long teamId) {
+        LocalDate endOfWeek = date.plusDays(6);
+        return taskRepository.findByCreatedDateBetweenAndTeamId(date, endOfWeek, teamId);
+    }
+
+    private boolean canReplaceChat(Engineer engineer, Task task) {
+        return engineer.getChat() && !hasChatOnSameDay(engineer, task.getCreatedDate());
+    }
+
+    private boolean isAvailableForChat(Engineer engineer, LocalDate date) {
+        return taskRepository.findByEngineerIdAndCreatedDateAndName(engineer.getId(), date, "chat").isEmpty();
+    }
+
+    private boolean hasChatOnSameDay(Engineer engineer, LocalDate date) {
+        return taskRepository.findByEngineerIdAndCreatedDateAndName(engineer.getId(), date, "chat").size() > 0;
+    }
+
+
+    private Engineer getEngineerById(List<Engineer> engineers, Long engineerId) {
+        // Fetch the engineer by ID from the provided list
+        return engineers.stream().filter(e -> e.getId().equals(engineerId)).findFirst().orElse(null);
     }
 }

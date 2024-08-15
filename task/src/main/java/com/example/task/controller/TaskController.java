@@ -58,9 +58,10 @@ public class TaskController {
     public List<TaskDTO> getTasksByEngineerId(@PathVariable Long engineerId) {
         return taskService.getTasksByEngineerId(engineerId);
     }
-
-
-
-
+    // New API endpoint to call the equilibrate function
+    @PostMapping("/equilibrate")
+    public void equilibrateTasks(@RequestParam int type, @RequestParam Long teamId) {
+        taskDistribution.equilibrate(type, teamId);
+    }
 
 }
