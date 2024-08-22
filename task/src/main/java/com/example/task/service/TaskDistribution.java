@@ -30,7 +30,7 @@ public class TaskDistribution {
 
     public void distributeAll(Long teamId) {
         RestTemplate restTemplate = new RestTemplate();
-        String engineersUrl = "http://localhost:8081/api/engineers/team/" + teamId;
+        String engineersUrl = "http://10.10.30.31:8081/api/engineers/team/" + teamId;
         ResponseEntity<List<Engineer>> response = restTemplate.exchange(
                 engineersUrl,
                 HttpMethod.GET,
@@ -43,15 +43,17 @@ public class TaskDistribution {
         Calendar startDate = Calendar.getInstance();
         Calendar endDate = Calendar.getInstance();
         endDate.add(Calendar.MONTH, 3);
-
+        // Distribute STC tasks
+        distributeSTCTasks(engineers, startDate, endDate);
         distributeP1Tasks(engineers, startDate, endDate);
         distributeChatTasks(engineers, startDate, endDate);
+
 
     }
 @Transactional
     public void equilibrate(int Type, Long teamId) {
         RestTemplate restTemplate = new RestTemplate();
-        String engineersUrl = "http://localhost:8081/api/engineers/team/" + teamId;
+        String engineersUrl = "http://10.10.30.31:8081/api/engineers/team/" + teamId;
         ResponseEntity<List<Engineer>> response = restTemplate.exchange(
                 engineersUrl,
                 HttpMethod.GET,
@@ -76,7 +78,7 @@ public class TaskDistribution {
     @Transactional
     public void reset(Long teamId) {
         LocalDate today = LocalDate.now();
-        taskRepository.deleteByCreatedDateGreaterThanEqualAndNameInAndTeamId(today, List.of("p1", "chat"), teamId);
+        taskRepository.deleteByCreatedDateGreaterThanEqualAndNameInAndTeamId(today, List.of("p1", "chat","stc"), teamId);
     }
     public void distributeP1Tasks(List<Engineer> engineers, Calendar startDate, Calendar endDate) {
         LocalDate currentDate = LocalDate.ofInstant(startDate.toInstant(), ZoneId.systemDefault());
@@ -466,5 +468,42 @@ public class TaskDistribution {
     private Engineer getEngineerById(List<Engineer> engineers, Long engineerId) {
         // Fetch the engineer by ID from the provided list
         return engineers.stream().filter(e -> e.getId().equals(engineerId)).findFirst().orElse(null);
+    }
+
+    ////distribute stc by default on wednesday
+    @Transactional
+    public void distributeSTCTasks(List<Engineer> engineers, Calendar startDate, Calendar endDate) {
+        LocalDate start = LocalDate.ofInstant(startDate.toInstant(), ZoneId.systemDefault());
+        LocalDate end = LocalDate.ofInstant(endDate.toInstant(), ZoneId.systemDefault());
+
+        // Loop through all the dates between start and end dates
+        while (!start.isAfter(end)) {
+            // Check if the day is Wednesday
+            if (start.getDayOfWeek() == DayOfWeek.WEDNESDAY) {
+                // Create a final variable to hold the current date
+                final LocalDate currentDate = start;
+
+                // Check if an STC task already exists on this date
+                boolean stcTaskExists = taskRepository.findByNameAndCreatedDate("stc", currentDate).size() > 0;
+
+                if (!stcTaskExists) {
+                    // Find an engineer with the STC attribute set to true
+                    Optional<Engineer> engineerOpt = engineers.stream()
+                            .filter(Engineer::getStc)
+                            .findFirst();
+
+                    // If an engineer is found, assign the STC task
+                    engineerOpt.ifPresent(engineer -> {
+                        // Convert LocalDate to Date
+                        Date date = Date.from(currentDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+                        // Use saveTask method
+                        saveTask(engineer.getId(), "stc", date, engineer.getTeamId());
+                    });
+                }
+            }
+            // Move to the next day
+            start = start.plusDays(1);
+        }
     }
 }

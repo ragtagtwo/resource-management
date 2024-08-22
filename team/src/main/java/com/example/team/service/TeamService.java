@@ -35,7 +35,7 @@ public class TeamService {
             TeamDTO teamDTO=convertToDTO(t);
             responseBodyVo.setTeamDTO(teamDTO);
             //fetch engineers list from engineer microservice
-            String UrlEngineer= "http://localhost:8081/api/engineers/team/" + id ;
+            String UrlEngineer= "http://10.10.30.31:8081/api/engineers/team/" + id ;
             ResponseEntity<List<Engineer>> response = restTemplate.exchange(
                 UrlEngineer,
                 HttpMethod.GET,
