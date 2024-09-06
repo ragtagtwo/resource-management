@@ -1,0 +1,44 @@
+<div class="flex h-screen bg-gray-100">
+    <!-- Sidebar -->
+    <div class="hidden md:flex flex-col w-64 bg-gray-900">
+        <div class="flex items-center justify-center h-16 bg-gray-900">
+            <span class="text-white font-bold uppercase">Focus</span>
+        </div>
+        <div class="flex flex-col flex-1 overflow-y-auto">
+            <nav class="flex-1 px-2 py-4 bg-gray-800 relative">
+                <a routerLink="calendar" routerLinkActive="bg-gray-700" class="flex items-center px-4 py-2 text-gray-100 hover:bg-gray-700">
+                    Home
+                </a>
+                <a routerLink="engineer-list" routerLinkActive="bg-gray-700" class="flex items-center px-4 py-2 mt-2 text-gray-100 hover:bg-gray-700">
+                    Engineers
+                </a>
+                <a routerLink="vacation" routerLinkActive="bg-gray-700" class="flex items-center px-4 py-2 mt-2 text-gray-100 hover:bg-gray-700">
+                    Vacations
+                </a>
+                <a routerLink="stats" routerLinkActive="bg-gray-700" class="flex items-center px-4 py-2 mt-2 text-gray-100 hover:bg-gray-700">
+                    Stats
+                </a>
+                <!-- Button at the bottom -->
+                <button (click)="navigateToTeamList()" class="flex items-center  px-4 py-2 mt-2 text-gray-100 hover:bg-gray-700  bottom-0 w-full bg-gray-800">
+                    Teams
+                </button>
+            </nav>
+        </div>
+    </div>
+    <!-- Main content -->
+    <div class="flex flex-col flex-1 overflow-y-auto">
+        <div class="flex items-center justify-between h-16 bg-white border-b border-gray-200">
+            <div class="flex items-center px-4">
+                <!-- Additional header content -->
+            </div>
+            <div class="flex items-center pr-4">
+                <!-- Additional header content -->
+            </div>
+        </div>
+
+        <!-- Router outlet for displaying routed components -->
+        <div class="p-4">
+            <router-outlet></router-outlet>
+        </div>
+    </div>
+</div>

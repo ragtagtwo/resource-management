@@ -1,0 +1,88 @@
+<div class="max-w-full mx-4 py-6 sm:mx-auto sm:px-6 lg:px-8">
+    <div class="mb-8 rounded-lg  shadow px-3 ">
+    
+    <div class="flex flex-wrap justify-between space-x-4 ">
+        <div class="min-w-12 bg-white rounded-lg text-left overflow-hidden shadow transform transition-all mb-4 mt-4">
+            <div class="bg-white p-5">
+                <div class="sm:flex sm:items-start">
+                    <div class="text-center sm:mt-0 sm:ml-2 sm:text-left">
+                        <h3 class="text-sm leading-6 font-medium text-gray-400">average score :</h3>
+                        <p class="text-3xl font-bold text-black">{{ averageScore }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="min-w-12  rounded-lg text-left overflow-hidden  transform transition-all mb-4 mt-4">
+            <div class=" p-5">
+                <div class="sm:flex sm:items-start">
+                    <div class="pl-2 pt-4 ">
+                        <button
+                            class="text-gray-500 hover:text-white border border-gray-500 hover:bg-gray-500 rounded-lg focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium text-xs px-3 py-1.5 text-center me-2 mb-2 dark:border-blue-500 dark:text-blue-500 dark:hover:text-white dark:hover:bg-blue-500 dark:focus:ring-blue-800"
+                            (click)="refreshStats()"
+                            >
+                            Refresh
+                        </button>
+                        <button
+                            class="text-gray-500 hover:text-white border border-gray-500 hover:bg-gray-500 rounded-lg focus:ring-4 focus:outline-none focus:ring-gray-200 font-medium text-xs px-3 py-1.5 text-center me-2 mb-2"
+                            (click)="openCustomizeModal()"
+                            >
+                            Customize
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+    <div *ngFor="let count of engineerStats" class="mb-8 bg-white rounded-lg shadow px-3">
+        <p class="text-sm font-medium text-gray-400 mb-2">{{ getEngineerName(count.engineerId) }}</p>
+        <div class="flex flex-wrap justify-between">
+            <div class="min-w-36 bg-white rounded-lg shadow mb-4 p-5">
+                <h3 class="text-sm font-medium text-gray-400">P1 done</h3>
+                <p class="text-3xl font-bold text-black">{{ count.p1 }}</p>
+            </div>
+            <div class="min-w-36 bg-gray-200 rounded-lg shadow mb-4 p-5">
+                <h3 class="text-sm font-medium text-gray-400">Chat done</h3>
+                <p class="text-3xl font-bold text-black">{{ count.chat }}</p>
+            </div>
+            <div class="min-w-36 bg-white rounded-lg shadow mb-4 p-5">
+                <h3 class="text-sm font-medium text-gray-400">QM done</h3>
+                <p class="text-3xl font-bold text-black">{{ count.qm }}</p>
+            </div>
+            <div class="min-w-36 bg-gray-200 rounded-lg shadow mb-4 p-5">
+                <h3 class="text-sm font-medium text-gray-400">STC done</h3>
+                <p class="text-3xl font-bold text-black">{{ count.stc }}</p>
+            </div>
+            <div class="min-w-36 bg-white rounded-lg shadow mb-4 p-5">
+                <h3 class="text-sm font-medium text-gray-400">Score</h3>
+                <p class="text-3xl font-bold text-black">{{ count.score }}</p>
+            </div>
+            <div class="min-w-36 bg-gray-200 rounded-lg shadow mb-4 p-5">
+                <h3 class="text-sm font-medium text-gray-400">Credit</h3>
+                <p class="text-3xl font-bold text-black">{{ count.credit }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+<!--modal for customize -->
+<div *ngIf="isCustomizeModalOpen" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex justify-center items-center">
+    <div class="bg-white p-4 rounded-lg shadow-lg w-96">
+      <h2 class="text-xl font-bold mb-4">Customize Stats</h2>
+      <form #customizeForm="ngForm" (ngSubmit)="fetchCustomizedStats(customizeForm)">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700">Start Date</label>
+          <input type="date" [(ngModel)]="startDate" name="startDate" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700">End Date</label>
+          <input type="date" [(ngModel)]="endDate" name="endDate" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
+        </div>
+        <div class="flex justify-end">
+          <button type="button" (click)="closeCustomizeModal()" class="px-4 py-2 bg-gray-300 rounded mr-2">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Fetch Stats</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<!--modal-->
