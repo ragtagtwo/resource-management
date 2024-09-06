@@ -28,32 +28,35 @@ public class TaskDistribution {
     @Autowired
     private VacationRepository vacationRepository;
 
-    public void distributeAll(Long teamId) {
+    public void distributeAll(Long teamId, Integer stc) {
         RestTemplate restTemplate = new RestTemplate();
-        String engineersUrl = "http://10.10.30.31:8081/api/engineers/team/" + teamId;
+        String engineersUrl = "http://localhost:8081/api/engineers/team/" + teamId;
         ResponseEntity<List<Engineer>> response = restTemplate.exchange(
                 engineersUrl,
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<List<Engineer>>() {}
         );
+        System.out.println("fetched engineers ok");
 
         List<Engineer> engineers = response.getBody();
 
         Calendar startDate = Calendar.getInstance();
         Calendar endDate = Calendar.getInstance();
         endDate.add(Calendar.MONTH, 3);
-        // Distribute STC tasks
-        distributeSTCTasks(engineers, startDate, endDate);
+
+        // Distribute STC tasks based on the provided day
+        distributeSTCTasks(engineers, startDate, endDate, stc);
+        System.out.println("stc ok");
+
         distributeP1Tasks(engineers, startDate, endDate);
+        System.out.println("p1 ok");
         distributeChatTasks(engineers, startDate, endDate);
-
-
     }
 @Transactional
     public void equilibrate(int Type, Long teamId) {
         RestTemplate restTemplate = new RestTemplate();
-        String engineersUrl = "http://10.10.30.31:8081/api/engineers/team/" + teamId;
+        String engineersUrl = "http://localhost:8081/api/engineers/team/" + teamId;
         ResponseEntity<List<Engineer>> response = restTemplate.exchange(
                 engineersUrl,
                 HttpMethod.GET,
@@ -121,17 +124,15 @@ public class TaskDistribution {
 
             // Get the first available engineer with priority 0 and p1 attribute true, and not on vacation
             Engineer engineerToAssign = engineers.stream()
-                    .sorted(Comparator.comparingInt(Engineer::getIndex)) // Sort engineers by index
-                    .filter(engineer -> engineer.getPriority() == 0 && engineer.getP1() && checkAvailableForP1(engineer, currentDateAsDate))
+                    .filter(engineer -> engineer.getPriority() == 0 && Boolean.TRUE.equals(engineer.getP1()) && checkAvailableForP1(engineer, currentDateAsDate))
                     .findFirst()
                     .orElse(null);
 
             if (engineerToAssign == null) {
                 // If no engineer with priority 0 is available, sort engineers by p1Done and assign to one with priority 1 and p1 attribute true
                 engineerToAssign = engineers.stream()
-                        .sorted(Comparator.comparingInt(Engineer::getIndex)
-                                .thenComparingInt(Engineer::getP1Done)) // Sort engineers by index, then by p1Done
-                        .filter(engineer -> engineer.getPriority() == 1 && engineer.getP1() && checkAvailableForP1(engineer, currentDateAsDate))
+                        .sorted(Comparator.comparingInt(Engineer::getP1Done)) // Sort engineers by p1Done only
+                        .filter(engineer -> engineer.getPriority() == 1 && Boolean.TRUE.equals(engineer.getP1()) && checkAvailableForP1(engineer, currentDateAsDate))
                         .findFirst()
                         .orElse(null);
             }
@@ -144,13 +145,13 @@ public class TaskDistribution {
 
                 // Check if all available engineers with p1 attribute as true have priority 1
                 boolean allPrioritiesOne = engineers.stream()
-                        .filter(engineer -> engineer.getP1())
+                        .filter(engineer -> Boolean.TRUE.equals(engineer.getP1()))
                         .allMatch(e -> e.getPriority() == 1);
 
                 if (allPrioritiesOne) {
                     // Reset all priorities for engineers with p1 attribute as true
                     for (Engineer engineer : engineers) {
-                        if (engineer.getP1()) {
+                        if (Boolean.TRUE.equals(engineer.getP1())) {
                             engineer.setPriority(0);
                         }
                     }
@@ -182,7 +183,8 @@ public class TaskDistribution {
         // Check the last working day before the start date
         Calendar previousWorkingDay = getPreviousWorkingDay(startDate);
         LocalDate previousWorkingDate = LocalDate.ofInstant(previousWorkingDay.toInstant(), ZoneId.systemDefault());
-
+        // Get the first day of the current week (Monday)
+        LocalDate firstDayOfWeek = previousWorkingDate.with(DayOfWeek.MONDAY);
         // Get the teamId (assuming all engineers belong to the same team)
         Long teamId = engineers.get(0).getTeamId();
 
@@ -202,8 +204,24 @@ public class TaskDistribution {
         // Initialize the starting index for the engineers
         int indexInitEngineer = (indexPreviousEngineer + 1) % engineers.size();
         // Set priority of engineers with index from indexPreviousEngineer to index 0 to 1
-        for (int i = indexPreviousEngineer; i >= 0; i--) {
-            engineers.get(i).setPriority(1);
+        // Set to keep track of engineers who worked on P1 tasks during the week
+        Set<Long> engineersWorkedOnP1 = new HashSet<>();
+
+        // Iterate from the last working day back to the first day of the week
+        LocalDate dateToCheck = previousWorkingDate;
+        while (!dateToCheck.isBefore(firstDayOfWeek)) {
+            Task task = taskRepository.findFirstByNameAndCreatedDateAndTeamId("p1", dateToCheck, teamId);
+            if (task != null) {
+                engineersWorkedOnP1.add(task.getEngineerId());
+            }
+            dateToCheck = dateToCheck.minusDays(1); // Move to the previous day
+        }
+
+        // Assign priority 1 to engineers who worked on P1 tasks during the week
+        for (Engineer engineer : engineers) {
+            if (engineersWorkedOnP1.contains(engineer.getId())) {
+                engineer.setPriority(1);
+            }
         }
         // Set the index for the engineers starting from indexInitEngineer
         for (int i = 0; i < engineers.size(); i++) {
@@ -418,7 +436,7 @@ public class TaskDistribution {
                                 recalculateScore(engineerScores, engineer, currentEngineer, task.getCreatedDate());
                                 credit--;
 
-                                if (credit == 0) {
+                                if (credit <= 0) {
                                     break;
                                 }
                             }
@@ -472,14 +490,17 @@ public class TaskDistribution {
 
     ////distribute stc by default on wednesday
     @Transactional
-    public void distributeSTCTasks(List<Engineer> engineers, Calendar startDate, Calendar endDate) {
+    public void distributeSTCTasks(List<Engineer> engineers, Calendar startDate, Calendar endDate, Integer stcDay) {
         LocalDate start = LocalDate.ofInstant(startDate.toInstant(), ZoneId.systemDefault());
         LocalDate end = LocalDate.ofInstant(endDate.toInstant(), ZoneId.systemDefault());
 
+        // Initialize a variable to track the index of the last assigned engineer
+        int lastAssignedIndex = -1;
+
         // Loop through all the dates between start and end dates
         while (!start.isAfter(end)) {
-            // Check if the day is Wednesday
-            if (start.getDayOfWeek() == DayOfWeek.WEDNESDAY) {
+            // Check if the day matches the specified `stcDay`
+            if (start.getDayOfWeek().getValue() == stcDay) {
                 // Create a final variable to hold the current date
                 final LocalDate currentDate = start;
 
@@ -487,19 +508,26 @@ public class TaskDistribution {
                 boolean stcTaskExists = taskRepository.findByNameAndCreatedDate("stc", currentDate).size() > 0;
 
                 if (!stcTaskExists) {
-                    // Find an engineer with the STC attribute set to true
-                    Optional<Engineer> engineerOpt = engineers.stream()
-                            .filter(Engineer::getStc)
-                            .findFirst();
+                    // Get the next available engineer in a round-robin manner
+                    int totalEngineers = engineers.size();
+                    Engineer engineerToAssign = null;
+
+                    // Loop through engineers to find the next available one with the STC attribute set to true
+                    for (int i = 1; i <= totalEngineers; i++) {
+                        int index = (lastAssignedIndex + i) % totalEngineers;
+                        Engineer candidate = engineers.get(index);
+                        if (candidate != null && Boolean.TRUE.equals(candidate.getStc())) {
+                            engineerToAssign = candidate;
+                            lastAssignedIndex = index;
+                            break;
+                        }
+                    }
 
                     // If an engineer is found, assign the STC task
-                    engineerOpt.ifPresent(engineer -> {
-                        // Convert LocalDate to Date
+                    if (engineerToAssign != null) {
                         Date date = Date.from(currentDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-
-                        // Use saveTask method
-                        saveTask(engineer.getId(), "stc", date, engineer.getTeamId());
-                    });
+                        saveTask(engineerToAssign.getId(), "stc", date, engineerToAssign.getTeamId());
+                    }
                 }
             }
             // Move to the next day

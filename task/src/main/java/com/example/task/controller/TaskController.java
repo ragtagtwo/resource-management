@@ -17,9 +17,12 @@ public class TaskController {
     private TaskDistribution taskDistribution;
 
     @PostMapping("/distribute")
-    public void distributeTasks(@RequestParam int number, @RequestParam Long teamId) {
+    public void distributeTasks(
+            @RequestParam int number,
+            @RequestParam Long teamId,
+            @RequestParam(required = false) Integer stc) {
         if (number == 1) {
-            taskDistribution.distributeAll(teamId);
+            taskDistribution.distributeAll(teamId, stc);
         } else if (number == 2) {
             taskDistribution.reset(teamId);
         }
