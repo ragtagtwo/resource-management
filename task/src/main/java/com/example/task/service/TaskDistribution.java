@@ -30,7 +30,7 @@ public class TaskDistribution {
 
     public void distributeAll(Long teamId, Integer stc) {
         RestTemplate restTemplate = new RestTemplate();
-        String engineersUrl = "http://localhost:8081/api/engineers/team/" + teamId;
+        String engineersUrl = "http://10.10.30.31:8081/api/engineers/team/" + teamId;
         ResponseEntity<List<Engineer>> response = restTemplate.exchange(
                 engineersUrl,
                 HttpMethod.GET,
@@ -56,7 +56,7 @@ public class TaskDistribution {
 @Transactional
     public void equilibrate(int Type, Long teamId) {
         RestTemplate restTemplate = new RestTemplate();
-        String engineersUrl = "http://localhost:8081/api/engineers/team/" + teamId;
+        String engineersUrl = "http://10.10.30.31:8081/api/engineers/team/" + teamId;
         ResponseEntity<List<Engineer>> response = restTemplate.exchange(
                 engineersUrl,
                 HttpMethod.GET,
@@ -171,6 +171,10 @@ public class TaskDistribution {
             }
             engineers.removeAll(onVacationToday);
             vacationingEngineers.addAll(onVacationToday);
+
+            if (currentDate.getDayOfWeek() == DayOfWeek.FRIDAY) {
+                reassignTasksForVacationingEngineers(engineers, vacationingEngineers, startDate, endDate, teamId);
+            }
 
             currentDate = currentDate.plusDays(1);
 
@@ -532,6 +536,106 @@ public class TaskDistribution {
             }
             // Move to the next day
             start = start.plusDays(1);
+        }
+    }
+    //code for fixing vacationning engineers each week
+    @Transactional
+    private void reassignTasksForVacationingEngineers(List<Engineer> engineers, List<Engineer> vacationingEngineers, Calendar startDate, Calendar endDate, Long teamId) {
+        // Identify vacationing engineers with priority = 0 and P1 attribute as true
+        List<Engineer> vacationingEngineersWithPriorityZero = new ArrayList<>();
+        Map<Engineer, List<LocalDate>> vacationDaysMap = new HashMap<>();
+
+        for (Engineer vacationingEngineer : vacationingEngineers) {
+            if (vacationingEngineer.getPriority() == 0 && Boolean.TRUE.equals(vacationingEngineer.getP1())) {
+                vacationingEngineersWithPriorityZero.add(vacationingEngineer);
+                List<LocalDate> vacationDays = getVacationDays(vacationingEngineer, startDate, endDate);
+                vacationDaysMap.put(vacationingEngineer, vacationDays);
+            }
+        }
+
+        // Print the vacationing engineers with priority zero
+        System.out.println("Vacationing engineers with priority 0 and P1 attribute:");
+        for (Engineer engineer : vacationingEngineersWithPriorityZero) {
+            System.out.println("Engineer ID: " + engineer.getId() + ", P1 Done: " + engineer.getP1Done());
+        }
+
+        // Sort the engineers by p1Done in ascending order
+        vacationingEngineersWithPriorityZero.sort(Comparator.comparingInt(Engineer::getP1Done));
+
+        // Print sorted vacationing engineers
+        System.out.println("Sorted vacationing engineers by P1 Done (ascending):");
+        for (Engineer engineer : vacationingEngineersWithPriorityZero) {
+            System.out.println("Engineer ID: " + engineer.getId() + ", P1 Done: " + engineer.getP1Done());
+        }
+
+        // Reassign tasks for vacation days
+        for (Map.Entry<Engineer, List<LocalDate>> entry : vacationDaysMap.entrySet()) {
+            Engineer vacationingEngineer = entry.getKey();
+            List<LocalDate> vacationDays = entry.getValue();
+
+            for (LocalDate vacationDay : vacationDays) {
+                System.out.println("Checking vacation day: " + vacationDay + " for engineer ID: " + vacationingEngineer.getId());
+
+                // Check if the original engineer worked P1 on another day in the same week
+                Task originalTask = taskRepository.findFirstByNameAndCreatedDateAndTeamId("p1", vacationDay, teamId);
+                if (originalTask == null) continue;
+
+                Long originalEngineerId = originalTask.getEngineerId();
+                System.out.println("Original Engineer ID: " + originalEngineerId + " worked on " + vacationDay);
+
+                Task doubleDayTask = findAnotherP1TaskInSameWeek(originalEngineerId, vacationDay);
+
+                if (doubleDayTask != null) {
+                    LocalDate doubleDay = doubleDayTask.getCreatedDate();
+                    System.out.println("Engineer ID: " + originalEngineerId + " has another task on: " + doubleDay);
+
+                    if (isEngineerAvailable(vacationingEngineer, doubleDay)) {
+                        System.out.println("Vacationing engineer ID: " + vacationingEngineer.getId() + " is available on double day: " + doubleDay);
+
+                        // Replace the task and update the priority of the vacationing engineer
+                        doubleDayTask.setEngineerId(vacationingEngineer.getId());
+                        taskRepository.save(doubleDayTask);
+                        System.out.println("Task on " + doubleDay + " reassigned from Engineer ID: " + originalEngineerId + " to Vacationing Engineer ID: " + vacationingEngineer.getId());
+
+
+                    } else {
+                        System.out.println("Vacationing engineer ID: " + vacationingEngineer.getId() + " is not available on double day: " + doubleDay);
+                    }
+                }
+            }
+        }
+    }
+    private List<LocalDate> getVacationDays(Engineer engineer, Calendar startDate, Calendar endDate) {
+        List<LocalDate> vacationDays = new ArrayList<>();
+        LocalDate currentDate = LocalDate.ofInstant(startDate.toInstant(), ZoneId.systemDefault());
+        LocalDate endLocalDate = LocalDate.ofInstant(endDate.toInstant(), ZoneId.systemDefault());
+
+        while (!currentDate.isAfter(endLocalDate)) {
+            if (!checkVacation(engineer, Date.from(currentDate.atStartOfDay(ZoneId.systemDefault()).toInstant()))) {
+                vacationDays.add(currentDate);
+            }
+            currentDate = currentDate.plusDays(1);
+        }
+        return vacationDays;
+    }
+
+    private Task findAnotherP1TaskInSameWeek(Long engineerId, LocalDate vacationDay) {
+        // Find another P1 task in the same week assigned to the same engineer
+        LocalDate weekStart = vacationDay.with(DayOfWeek.MONDAY);
+        LocalDate weekEnd = vacationDay.with(DayOfWeek.SUNDAY);
+
+        return taskRepository.findFirstByNameAndCreatedDateBetweenAndEngineerId("p1", weekStart, weekEnd, engineerId);
+    }
+
+    private boolean isEngineerAvailable(Engineer engineer, LocalDate date) {
+        Date dateAsDate = Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        return checkAvailableForP1(engineer, dateAsDate);
+    }
+
+    private void updateEngineerPriority(List<Engineer> engineers, Long engineerId, int newPriority) {
+        Engineer engineer = engineers.stream().filter(e -> e.getId().equals(engineerId)).findFirst().orElse(null);
+        if (engineer != null) {
+            engineer.setPriority(newPriority);
         }
     }
 }
